@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">RSS</string>
+    <string name="rssfeed">http://pox.globo.com/rss/g1/brasil/</string>
+    <string name="downloadCompleted">br.ufpe.cin.if710.rss.downloadcompleted</string>
+</resources>
