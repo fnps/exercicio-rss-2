@@ -18,7 +18,12 @@ class RssDownloaderService : IntentService("RssDownloaderService") {
         val str = getRssFeed(linkAddress!!.getStringExtra("uri"))
         val list = parser.parse(str)
         list.forEach {
-            SQLiteRSSHelper.getInstance(applicationContext).insertItem(ItemRSS("fabio","fabio@exemple","30sep","desc"))
+            ItemRSSHelper(applicationContext).insertItem(ItemRSS(
+                    it.title,
+                    it.link,
+                    it.pubDate,
+                    it.description
+            ))
         }
         sendBroadcast(Intent(getString(R.string.downloadCompleted)))
     }

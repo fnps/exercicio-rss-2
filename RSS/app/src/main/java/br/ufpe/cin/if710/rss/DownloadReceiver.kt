@@ -9,22 +9,22 @@ import android.widget.Toast
 import org.jetbrains.anko.doAsync
 import org.jetbrains.anko.uiThread
 
-class downloadReceiver(lista: SortedList<ItemRSS>, db: SQLiteRSSHelper) : BroadcastReceiver() {
-
-    private val rv = lista
-    private val database = db
+class DownloadReceiver(private val lista: SortedList<ItemRSS>) : BroadcastReceiver() {
 
     override fun onReceive(p0: Context?, p1: Intent?) {
         doAsync {
-            val cItems = database.getItems()
+            val cItems = ItemRSSHelper(p0!!).getItems()
+            val listItems = ArrayList<ItemRSS>()
             uiThread {
+                Toast.makeText(p0, cItems.count.toString(),Toast.LENGTH_SHORT).show()
                 if (cItems != null && cItems!!.moveToFirst()) {
                     do {
-                        rv.add(ItemRSS(cItems.getString(cItems.getColumnIndex(RssProviderContract.TITLE)),
-                                cItems.getString(cItems.getColumnIndex(RssProviderContract.LINK)),
-                                cItems.getString(cItems.getColumnIndex(RssProviderContract.DATE)),
-                                cItems.getString(cItems.getColumnIndex(RssProviderContract.DESCRIPTION))))
+                        listItems.add(ItemRSS(cItems.getString(cItems.getColumnIndex(SQLiteHelper.TITLE)),
+                                cItems.getString(cItems.getColumnIndex(SQLiteHelper.LINK)),
+                                cItems.getString(cItems.getColumnIndex(SQLiteHelper.DATE)),
+                                cItems.getString(cItems.getColumnIndex(SQLiteHelper.DESC))))
                     } while (cItems.moveToNext())
+                    lista.replaceAll(listItems)
                 }
                 else{
                     Toast.makeText(p0,"NADA RECEBIDO",Toast.LENGTH_LONG).show()

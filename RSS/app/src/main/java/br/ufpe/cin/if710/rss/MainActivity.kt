@@ -14,6 +14,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import org.jetbrains.anko.defaultSharedPreferences
+import org.jetbrains.anko.doAsync
 import java.io.IOException
 
 open class MainActivity : Activity() {
@@ -21,12 +22,11 @@ open class MainActivity : Activity() {
     private var conteudoRSS: RecyclerView? = null
     private var viewAdapter: RssAdapter? = null
     private var sortedList: SortedList<ItemRSS>? = null
-    private var db: SQLiteRSSHelper ?= null
-    private var receiver: downloadReceiver ?= null
+    private var receiver: DownloadReceiver? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        db = SQLiteRSSHelper.getInstance(applicationContext)
+
         //iniciando lista
         sortedList = SortedList(ItemRSS::class.java, metodosCallback)
         //iniciando adapter
@@ -38,7 +38,10 @@ open class MainActivity : Activity() {
             adapter = viewAdapter
         }
         setContentView(conteudoRSS)
-        receiver = downloadReceiver(sortedList!!, db as SQLiteRSSHelper)
+        receiver = DownloadReceiver(sortedList!!)
+
+        startService(Intent(applicationContext, ClearDatabaseService::class.java))
+
     }
 
     override fun onStart() {
@@ -113,7 +116,9 @@ open class MainActivity : Activity() {
         //é iniciado no navegador
         override fun onClick(v: View) {
             val position = this.adapterPosition
-            val link = Uri.parse(sortedList?.get(position)?.link)
+            val str = sortedList?.get(position)?.link
+            val link = Uri.parse(str)
+            ItemRSSHelper(applicationContext).markAsRead(str!!)
             val intent = Intent(Intent.ACTION_VIEW, link)
             when {
                 intent.resolveActivity(packageManager) != null -> startActivity(intent)
