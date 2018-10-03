@@ -2,4 +2,9 @@
     <string name="app_name">RSS</string>
     <string name="rssfeed">http://pox.globo.com/rss/g1/brasil/</string>
     <string name="downloadCompleted">br.ufpe.cin.if710.rss.downloadcompleted</string>
+    <string name="channel_id">channel_rss_notification_id</string>
+    <string name="channel_name">channel_rss_notification_name</string>
+    <string name="channel_description">channel usado para exibir notificação de download finalizado do conteudo rss</string>
+    <string name="rss_notification_title">RSS</string>
+    <string name="rss_notification_text">Download finalizado!</string>
 </resources>

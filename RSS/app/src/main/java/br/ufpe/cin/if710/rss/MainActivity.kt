@@ -1,9 +1,15 @@
 package br.ufpe.cin.if710.rss
 
 import android.app.Activity
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.support.v7.util.SortedList
 import android.support.v7.widget.LinearLayoutManager
@@ -14,7 +20,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import org.jetbrains.anko.defaultSharedPreferences
-import org.jetbrains.anko.doAsync
+import org.jetbrains.anko.notificationManager
 import java.io.IOException
 
 open class MainActivity : Activity() {
@@ -26,6 +32,8 @@ open class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        createNotificationRSSDownloadedChannel()
 
         //iniciando lista
         sortedList = SortedList(ItemRSS::class.java, metodosCallback)
@@ -39,27 +47,59 @@ open class MainActivity : Activity() {
         }
         setContentView(conteudoRSS)
         receiver = DownloadReceiver(sortedList!!)
+    }
 
-        startService(Intent(applicationContext, ClearDatabaseService::class.java))
-
+    private fun createNotificationRSSDownloadedChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            manager.createNotificationChannel(
+                    NotificationChannel(
+                            getString(R.string.channel_id),
+                            getString(R.string.channel_name),
+                            NotificationManager.IMPORTANCE_DEFAULT
+                    ).apply {
+                        description = getString(R.string.channel_description)
+                    }
+            )
+        }
     }
 
     override fun onStart() {
         super.onStart()
         try {
+            //Desativando o NotificationReceiver estatico, com a MainActivity aberta não é necessario mostrar notificações
+            setNotificationReceiverState(PackageManager.COMPONENT_ENABLED_STATE_DISABLED)
+            //Registrando o broadcastreceiver dinamico para atualizar o recyclerview
             registerReceiver(receiver, IntentFilter(getString(R.string.downloadCompleted)))
-            val intent = Intent(applicationContext, RssDownloaderService::class.java)
-            intent.putExtra("uri", defaultSharedPreferences.getString(MainActivity.rssfeed, getString(R.string.rssfeed)))
-            startService(intent)
+            //iniciando o serviço que efetua o download e povoamento do banco de dados
+            startService(
+                    Intent(applicationContext, RssDownloaderService::class.java).apply {
+                        putExtra("uri", defaultSharedPreferences.getString(MainActivity.rssfeed, getString(R.string.rssfeed)))
+                    }
+            )
 
         } catch (e: IOException) {
             e.printStackTrace()
         }
     }
 
-    override fun onStop() {
+    //Metodo que altera o stado do receiver estatico NotificationReceiver
+    private fun setNotificationReceiverState(state: Int) {
+        packageManager.apply {
+            setComponentEnabledSetting(
+                    ComponentName(applicationContext, NotificationReceiver::class.java),
+                    state,
+                    PackageManager.DONT_KILL_APP
+            )
+        }
+    }
+
+    override fun onPause() {
+        setNotificationReceiverState(PackageManager.COMPONENT_ENABLED_STATE_ENABLED)
+        // retirando o registro do receiver dinamico
         unregisterReceiver(receiver)
-        super.onStop()
+        //ativando novamente o receiver estatico para exibir notificacao caso o download nao tenha terminado ainda
+        super.onPause()
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
@@ -119,6 +159,7 @@ open class MainActivity : Activity() {
             val str = sortedList?.get(position)?.link
             val link = Uri.parse(str)
             ItemRSSHelper(applicationContext).markAsRead(str!!)
+            sortedList?.removeItemAt(position)
             val intent = Intent(Intent.ACTION_VIEW, link)
             when {
                 intent.resolveActivity(packageManager) != null -> startActivity(intent)

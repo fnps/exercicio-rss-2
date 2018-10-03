@@ -6,10 +6,15 @@ import android.database.SQLException
 
 class ItemRSSHelper(val context: Context) {
 
-    fun getItems(): Cursor {
-        val helper = SQLiteHelper(context)
-        val db = helper.readableDatabase
-        return db.query(TABLE, null, "$USED = ?", arrayOf("FALSE"), null, null, null)
+    fun getItems(): Cursor? {
+        return try {
+            val helper = SQLiteHelper(context)
+            val db = helper.readableDatabase
+            db.query(TABLE, null, "$USED = ?", arrayOf("FALSE"), null, null, null)
+        }catch (e: SQLException) {
+            e.printStackTrace()
+            null
+        }
     }
 
     fun markAsRead(link: String): Boolean {
@@ -98,9 +103,12 @@ class ItemRSSHelper(val context: Context) {
             val cursor = db.query(TABLE, null, "$LINK = ?", arrayOf("$link"), null, null, null)
             cursor.count
             if (cursor == null || !cursor.moveToFirst()) {
+                db.close()
                 null
             } else {
-                ItemRSS(cursor.getString(cursor.getColumnIndex(TITLE)), cursor.getString(cursor.getColumnIndex(LINK)), cursor.getString(cursor.getColumnIndex(DATE)), cursor.getString(cursor.getColumnIndex(DESC)))
+                val itemRSS = ItemRSS(cursor.getString(cursor.getColumnIndex(TITLE)), cursor.getString(cursor.getColumnIndex(LINK)), cursor.getString(cursor.getColumnIndex(DATE)), cursor.getString(cursor.getColumnIndex(DESC)))
+                db.close()
+                itemRSS
             }
         } catch (e: SQLException) {
             e.printStackTrace()

@@ -25,6 +25,7 @@ class RssDownloaderService : IntentService("RssDownloaderService") {
                     it.description
             ))
         }
+        Thread.sleep(5000)
         sendBroadcast(Intent(getString(R.string.downloadCompleted)))
     }
 

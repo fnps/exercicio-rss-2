@@ -24,9 +24,15 @@
         <service
             android:name=".ClearDatabaseService"
             android:exported="false" />
-        <service
-            android:name=".ClearDatabaseService"
-            android:exported="false"></service>
+
+        <receiver
+            android:name=".NotificationReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="br.ufpe.cin.if710.rss.downloadcompleted"/>
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>
