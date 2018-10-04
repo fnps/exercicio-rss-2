@@ -3,6 +3,7 @@ package br.ufpe.cin.if710.rss
 import android.app.IntentService
 import android.content.Context
 import android.content.Intent
+import android.support.v4.content.LocalBroadcastManager
 import java.io.ByteArrayOutputStream
 import java.io.IOException
 import java.io.InputStream
@@ -25,8 +26,8 @@ class RssDownloaderService : IntentService("RssDownloaderService") {
                     it.description
             ))
         }
-        Thread.sleep(5000)
-        sendBroadcast(Intent(getString(R.string.downloadCompleted)))
+        Thread.sleep(3000)
+        LocalBroadcastManager.getInstance(applicationContext).sendBroadcast(Intent(getString(R.string.downloadCompleted)))
     }
 
     //classe de download usada como a disponibilizada por padrao, possivel implementacao

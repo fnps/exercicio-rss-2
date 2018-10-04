@@ -3,14 +3,15 @@ package br.ufpe.cin.if710.rss
 import android.app.Activity
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.BroadcastReceiver
 import android.content.ComponentName
-import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.support.v4.content.LocalBroadcastManager
 import android.support.v7.util.SortedList
 import android.support.v7.widget.LinearLayoutManager
 import android.support.v7.widget.RecyclerView
@@ -19,6 +20,7 @@ import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import android.widget.Toast
 import org.jetbrains.anko.defaultSharedPreferences
 import org.jetbrains.anko.notificationManager
 import java.io.IOException
@@ -28,13 +30,13 @@ open class MainActivity : Activity() {
     private var conteudoRSS: RecyclerView? = null
     private var viewAdapter: RssAdapter? = null
     private var sortedList: SortedList<ItemRSS>? = null
-    private var receiver: DownloadReceiver? = null
+    private var downloadReceiver: BroadcastReceiver? = null
+    private val notificationReceiver = NotificationReceiver()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Toast.makeText(applicationContext, "ON CREATE", Toast.LENGTH_SHORT).show()
         setContentView(R.layout.activity_main)
-
         createNotificationRSSDownloadedChannel()
-
         //iniciando lista
         sortedList = SortedList(ItemRSS::class.java, metodosCallback)
         //iniciando adapter
@@ -46,13 +48,15 @@ open class MainActivity : Activity() {
             adapter = viewAdapter
         }
         setContentView(conteudoRSS)
-        receiver = DownloadReceiver(sortedList!!)
+        if (downloadReceiver == null) {
+            downloadReceiver = DownloadReceiver(sortedList!!)
+            Toast.makeText(applicationContext, "CRIOU NOVO DOWNLOADRECEIVER", Toast.LENGTH_SHORT).show()
+        }
     }
 
     private fun createNotificationRSSDownloadedChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            manager.createNotificationChannel(
+            notificationManager.createNotificationChannel(
                     NotificationChannel(
                             getString(R.string.channel_id),
                             getString(R.string.channel_name),
@@ -66,11 +70,12 @@ open class MainActivity : Activity() {
 
     override fun onStart() {
         super.onStart()
+        Toast.makeText(applicationContext, "ON START", Toast.LENGTH_SHORT).show()
         try {
             //Desativando o NotificationReceiver estatico, com a MainActivity aberta não é necessario mostrar notificações
-            setNotificationReceiverState(PackageManager.COMPONENT_ENABLED_STATE_DISABLED)
+            LocalBroadcastManager.getInstance(applicationContext).unregisterReceiver(notificationReceiver)
             //Registrando o broadcastreceiver dinamico para atualizar o recyclerview
-            registerReceiver(receiver, IntentFilter(getString(R.string.downloadCompleted)))
+            LocalBroadcastManager.getInstance(applicationContext).registerReceiver(downloadReceiver!!, IntentFilter(getString(R.string.downloadCompleted)))
             //iniciando o serviço que efetua o download e povoamento do banco de dados
             startService(
                     Intent(applicationContext, RssDownloaderService::class.java).apply {
@@ -83,23 +88,17 @@ open class MainActivity : Activity() {
         }
     }
 
-    //Metodo que altera o stado do receiver estatico NotificationReceiver
-    private fun setNotificationReceiverState(state: Int) {
-        packageManager.apply {
-            setComponentEnabledSetting(
-                    ComponentName(applicationContext, NotificationReceiver::class.java),
-                    state,
-                    PackageManager.DONT_KILL_APP
-            )
-        }
+    override fun onStop() {
+        // retirando o registro do receiver dinamico
+        LocalBroadcastManager.getInstance(applicationContext).unregisterReceiver(downloadReceiver!!)
+        LocalBroadcastManager.getInstance(applicationContext).registerReceiver(notificationReceiver, IntentFilter(getString(R.string.downloadCompleted)))
+        Toast.makeText(applicationContext, "ON STOP", Toast.LENGTH_SHORT).show()
+        super.onStop()
     }
 
-    override fun onPause() {
-        setNotificationReceiverState(PackageManager.COMPONENT_ENABLED_STATE_ENABLED)
-        // retirando o registro do receiver dinamico
-        unregisterReceiver(receiver)
-        //ativando novamente o receiver estatico para exibir notificacao caso o download nao tenha terminado ainda
-        super.onPause()
+    override fun onDestroy() {
+        Toast.makeText(applicationContext,"ON DESTROY",Toast.LENGTH_SHORT).show()
+        super.onDestroy()
     }
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
